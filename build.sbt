@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
   "org.locationtech.geotrellis" %% "geotrellis-spark" % "1.0.0",
   "org.locationtech.geotrellis" %% "geotrellis-proj4" % "1.0.0",
   "com.amazonaws" % "aws-java-sdk" % "1.7.4",
-  // "org.mongodb.scala" %% "mongo-scala-driver" % "1.2.1",
+  "org.mongodb.spark" %% "mongo-spark-connector" % "2.0.0",
   ("org.apache.hadoop" % "hadoop-aws" % "2.7.2").
     exclude("commons-beanutils", "commons-beanutils-core").
     exclude("commons-collections", "commons-collections"),

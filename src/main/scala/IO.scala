@@ -19,6 +19,8 @@ import org.apache.spark.SparkContext
 
 object IO {
 
+  case class Geometry(`type`: String, coordinates: Seq[Double])
+
   def readCsvs(path: String)(implicit sqlContext: SQLContext, sc: SparkContext) = {
     val files = listFiles(path, ".+\\.csv$")
     files.map(readOneCsv).reduce(_.union(_))
@@ -59,6 +61,10 @@ object IO {
   }
 
   def readPolygonsAsPoints(url: URL) : List[Map[String, Object]]= {
-    readSimpleFeatures(url).flatMap{ ft => ft.geom[jts.MultiPolygon].map(_.getCentroid).map(x => List(x.getX, x.getY).mkString(",")).map(x => Map("geometry" -> x) ++ ft.attributeMap ) }
+    readSimpleFeatures(url)
+      .flatMap{ ft => ft.geom[jts.MultiPolygon]
+        .map(_.getCentroid)
+        .map(x => Geometry("Point", Seq(x.getX, x.getY)))
+        .map(x => Map("geometry" -> x) ++ ft.attributeMap) }
   }
 }
