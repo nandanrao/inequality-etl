@@ -2,15 +2,18 @@ name := "Inequality-ETL"
 
 version := "0.0.1-SNAPSHOT"
 
+assemblyJarName in assembly := "ETL.jar"
+
 scalaVersion := "2.11.8"
 
-mainClass := Some("ETL")
+mainClass := Some("edu.upf.inequality.etl.ETL")
 
 libraryDependencies ++= Seq(
   "org.locationtech.geotrellis" %% "geotrellis-vector" % "1.0.0",
   "org.locationtech.geotrellis" %% "geotrellis-shapefile" % "1.0.0",
   "org.locationtech.geotrellis" %% "geotrellis-spark" % "1.0.0",
   "org.locationtech.geotrellis" %% "geotrellis-proj4" % "1.0.0",
+  "harsha2010" % "magellan" % "1.0.4-s_2.11",
   "com.amazonaws" % "aws-java-sdk" % "1.7.4",
   "org.mongodb.spark" %% "mongo-spark-connector" % "2.0.0",
   ("org.apache.hadoop" % "hadoop-aws" % "2.7.2").
@@ -25,7 +28,8 @@ libraryDependencies ++= Seq(
 
 resolvers ++= Seq[Resolver](
   "LocationTech GeoTrellis Snapshots" at "https://repo.locationtech.org/content/repositories/geotrellis-snapshots",
-  "Geotools" at "http://download.osgeo.org/webdav/geotools/"
+  "Geotools" at "http://download.osgeo.org/webdav/geotools/",
+  "bintray-spark-packages" at "https://dl.bintray.com/spark-packages/maven/"
 )
 
 assemblyMergeStrategy in assembly := {

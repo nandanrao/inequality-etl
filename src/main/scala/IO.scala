@@ -4,7 +4,7 @@ import geotrellis.shapefile._
 import ShapeFileReader.SimpleFeatureWrapper
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.geotools.data.shapefile._
-import java.net.URL
+import java.net.{URL, URI}
 import geotrellis.vector._
 import org.geotools.data.simple._
 import org.opengis.feature.simple._
@@ -12,10 +12,15 @@ import org.geotools.data.shapefile._
 import com.vividsolutions.jts.{geom => jts}
 import scala.collection.mutable
 import scala.collection.JavaConversions._
-import org.apache.spark.sql.{SQLContext, DataFrame}
+import org.apache.spark.sql.{SQLContext, DataFrame, Row}
 import org.apache.spark.sql.functions.{lit}
 import org.apache.spark.SparkContext
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.rdd.RDD
 
+import Interset._
+import magellan.{Polygon => MgPolygon}
+import geotrellis.vector._
 
 object IO {
 
@@ -39,32 +44,30 @@ object IO {
 
   def listFiles(path: String, pattern: String)(implicit sc: SparkContext) = {
     FileSystem
-      .get(sc.hadoopConfiguration)
+      .get(new URI(path), sc.hadoopConfiguration)
       .listStatus(new Path(path))
       .map(_.getPath().toString())
       .filter(x => x matches pattern)
   }
 
-  def readSimpleFeatures(url: URL) = {
-    // Extract the features as GeoTools 'SimpleFeatures'
-    val ds = new ShapefileDataStore(url)
-    val ftItr: SimpleFeatureIterator = ds.getFeatureSource.getFeatures.features
-
-    try {
-      val simpleFeatures = mutable.ListBuffer[SimpleFeature]()
-      while(ftItr.hasNext) simpleFeatures += ftItr.next()
-      simpleFeatures.toList
-    } finally {
-      ftItr.close
-      ds.dispose
-    }
+  // magellan conversion to jts.polygon
+  implicit def magellanConversion(poly: MgPolygon) : Polygon = {
+    Polygon(poly.xcoordinates
+      .zip(poly.ycoordinates)
+      .map(Point(_)).toSeq)
   }
 
-  def readPolygonsAsPoints(url: URL) : List[Map[String, Object]]= {
-    readSimpleFeatures(url)
-      .flatMap{ ft => ft.geom[jts.MultiPolygon]
-        .map(_.getCentroid)
-        .map(x => Geometry("Point", Seq(x.getX, x.getY)))
-        .map(x => Map("geometry" -> x) ++ ft.attributeMap) }
+  def readAsGeometry(r: Row) : Option[Geometry] = {
+    r.getAs[MgPolygon](2).centroid.as[Point].map(p => Geometry("Point", Seq(p.x, p.y)))
+  }
+
+  def readShapeFile(path: String)(implicit spark: SparkSession) : RDD[Interset] = {
+    spark.read.format("magellan")
+      .load(path).select("polygon")
+      .rdd
+      .map(r => {
+        Map[String,Object]("geometry" -> readAsGeometry(r)) ++ r.getAs[Map[String, Object]](3)
+      })
+      .map(castToInterset)
   }
 }
