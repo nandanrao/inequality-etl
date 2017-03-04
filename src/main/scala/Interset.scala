@@ -8,7 +8,6 @@ import java.net.URL
 import scala.util.Try
 import IO._
 
-
 object Interset {
 
   case class Interset(
@@ -22,23 +21,19 @@ object Interset {
     pop_obs: Option[Int]
   )
 
-  // everything that's a double should be 0 if it doesn't exist?
-  implicit def toDouble(a:Object) : Double = { Try(a.asInstanceOf[Double]).getOrElse(0.0) }
 
-  // All our longs should be null if they don't exist because they're id's of sorts
-  implicit def toInt(a:Object) : Option[Int] = { Try(a.asInstanceOf[Int]).toOption }
+  // // All our longs should be null if they don't exist because they're id's of sorts
+  implicit def toInt(a:String) : Option[Int] = { Try(a.trim.toInt).toOption }
 
-  implicit def toGeometry(a:Object) : Option[Geometry] = { Try(a.asInstanceOf[Geometry]).toOption }
-
-  def castToInterset(m: Map[String, Object]) : Interset = {
+  def castToInterset(m: Map[String, String], g: Option[Geometry]) : Interset = {
     Interset(
       m("nl_obs"),
-      m("pop_area"),
+      m("pop_area").toDouble,
       m("pop_part"),
-      m("int_area"),
-      m("nl_area"),
+      m("int_area").toDouble,
+      m("nl_area").toDouble,
       m("nl_part"),
-      m("geometry"),
+      g,
       m("pop_obs")
     )
   }

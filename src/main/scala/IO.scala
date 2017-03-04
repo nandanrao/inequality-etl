@@ -18,9 +18,9 @@ import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.rdd.RDD
 
-import Interset._
+import Interset.{Interset, castToInterset}
 import magellan.{Polygon => MgPolygon}
-import geotrellis.vector._
+import geotrellis.vector.{Point, Polygon}
 
 object IO {
 
@@ -28,7 +28,7 @@ object IO {
 
   def readCsvs(path: String)(implicit sqlContext: SQLContext, sc: SparkContext) = {
     val files = listFiles(path, ".+\\.csv$")
-    files.map(readOneCsv).reduce(_.union(_))
+    files.tail.foldLeft(readOneCsv(files.head))((a:DataFrame, b:String) => a.union(readOneCsv(b)))
   }
 
   def readOneCsv(path: String)(implicit sqlContext: SQLContext) : DataFrame = {
@@ -42,7 +42,7 @@ object IO {
     df.withColumn("part", lit(part.toLong))
   }
 
-  def listFiles(path: String, pattern: String)(implicit sc: SparkContext) = {
+  def listFiles(path: String, pattern: String)(implicit sc: SparkContext) : Seq[String] = {
     FileSystem
       .get(new URI(path), sc.hadoopConfiguration)
       .listStatus(new Path(path))
@@ -50,24 +50,24 @@ object IO {
       .filter(x => x matches pattern)
   }
 
-  // magellan conversion to jts.polygon
   implicit def magellanConversion(poly: MgPolygon) : Polygon = {
     Polygon(poly.xcoordinates
       .zip(poly.ycoordinates)
       .map(Point(_)).toSeq)
   }
 
-  def readAsGeometry(r: Row) : Option[Geometry] = {
+  def readGeometry(r: Row) : Option[Geometry] = {
     r.getAs[MgPolygon](2).centroid.as[Point].map(p => Geometry("Point", Seq(p.x, p.y)))
   }
 
+  def readMetadata(r: Row) : Map[String, String] = {
+    r.getAs[Map[String,String]](3)
+  }
+
   def readShapeFile(path: String)(implicit spark: SparkSession) : RDD[Interset] = {
-    spark.read.format("magellan")
-      .load(path).select("polygon")
-      .rdd
-      .map(r => {
-        Map[String,Object]("geometry" -> readAsGeometry(r)) ++ r.getAs[Map[String, Object]](3)
-      })
-      .map(castToInterset)
+    val rdd = spark.read.format("magellan").load(path).rdd
+    val md: RDD[Map[String, String]] = rdd.map(readMetadata)
+    val polys: RDD[Option[Geometry]] = rdd.map(readGeometry)
+    md.zip(polys).map(t => castToInterset(t._1, t._2))
   }
 }

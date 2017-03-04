@@ -43,7 +43,7 @@ object ETL {
 
     // go.
     // looking at interset, a couple points seem to be duplicates.
-    // val c = spark.sql("select geometry from interset WHERE nl_obs = 52448 AND nl_part = 5023").collect()
+    // val c = spark.sql("select geometry from interset WHERE nl_obs = 52448 AND nl_part = 5023")p.collect()
     // distinct on geometry whener interset is created?
     val intersetDF = readShapeFile(inter).toDF
     intersetDF.createOrReplaceTempView("interset")
