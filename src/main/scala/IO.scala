@@ -26,6 +26,14 @@ object IO {
 
   case class Geometry(`type`: String, coordinates: Seq[Double])
 
+  def loadCsv(path:String)(implicit spark: SparkSession) : DataFrame = {
+    spark.read
+      .format("com.databricks.spark.csv")
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .load(path)
+  }
+
   def readCsvs(path: String)(implicit sqlContext: SQLContext, sc: SparkContext) = {
     val files = listFiles(path, ".+\\.csv$")
     files.tail.foldLeft(readOneCsv(files.head))((a:DataFrame, b:String) => a.union(readOneCsv(b)))

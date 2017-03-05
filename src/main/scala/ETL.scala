@@ -14,18 +14,19 @@ import Ratios._
 object ETL {
   def main(args: Array[String]) {
 
-    if (args.length != 4) {
+    if (args.length != 5) {
       System.err.println(s"""
         |Usage: Indexer <mobile>
         |  <inter> is a path to interset shape files
         |  <nl> is a path to nl csv files
         |  <pop> is a path to population csv files
         |  <mongo> is a path to mongo, 127.0.0.1:27017/inequality.etl
+        |  <dataset> is which dataset to use: landscan, gpw_v3, gpw_v4
         """.stripMargin)
       System.exit(1)
     }
 
-    val Array(inter, nl, pop, mongo) = args
+    val Array(inter, nl, pop, mongo, dataset) = args
 
     // interactive
     // val Array(inter, nl, pop) = Array("data_example/03_Interset_Pop_Night", "data_example/04_Zonnal_Stats/Night", "data_example/04_Zonnal_Stats/Pop")
@@ -47,9 +48,9 @@ object ETL {
     // distinct on geometry whener interset is created?
     val intersetDF = readShapeFile(inter).toDF
     intersetDF.createOrReplaceTempView("interset")
-    val nightlight = readCsvs(nl)
+    val nightlight = loadCsv(nl)
     nightlight.createOrReplaceTempView("nightlight")
-    val population = readCsvs(pop)
+    val population = loadCsv(pop)
     population.createOrReplaceTempView("population")
 
     val intersetMerged = spark.sql("""
@@ -57,7 +58,7 @@ object ETL {
 	CROSS JOIN population p ON p.obs = i.pop_obs AND p.part = i.pop_part
 	CROSS JOIN nightlight n ON n.obs = i.nl_obs AND n.part = i.nl_part""")
 
-    val m = ratioAdder(intersetMerged, ratioPairs)
+    val m = ratioAdder(intersetMerged, datasets(dataset))
       .drop(nightlight.columns.filter(_ matches "F.+"): _*)
       .drop("obs", "part")
 

@@ -2,7 +2,7 @@ name := "Inequality-ETL"
 
 version := "0.0.1-SNAPSHOT"
 
-assemblyJarName in assembly := "ETL.jar"
+assemblyJarName in assembly := "ETL-quick.jar"
 
 scalaVersion := "2.11.8"
 
